@@ -4,8 +4,6 @@ import sqlite3
 from os import listdir
 from os.path import isfile, join
 
-
-
 class DataUtils:
     def update_girs(self):
         filenames_in_data = self.cursor.execute('SELECT filename FROM girls').fetchall()
@@ -13,8 +11,8 @@ class DataUtils:
 
         for filename in files:
             if (filename,) not in filenames_in_data:
-                self.cursor.execute('''INSERT INTO girls VALUES ('?', 0)''', (filename,))
-
+                self.cursor.execute('''INSERT INTO girls VALUES (?, 0)''', (filename,))
+                print('New girl %s' % filename)
         self.conn.commit()
 
     def __init__(self):
@@ -29,11 +27,13 @@ class DataUtils:
             print('Table already created.')
             pass
 
+        self.update_girs()
+
     def get_random_girl(self):
         return self.cursor.execute('''SELECT * FROM girls ORDER BY RANDOM() LIMIT 1''').fetchone()
 
     def get_girl(self, girl_name):
-        return self.cursor.execute('''SELECT * FROM girls WHERE filename='?' ''', (girl_name,)).fetchone()
+        return self.cursor.execute('''SELECT * FROM girls WHERE filename=? ''', (girl_name,)).fetchone()
 
     @staticmethod
     def expected_value(first, second):
@@ -56,6 +56,6 @@ class DataUtils:
                 k = 10
 
             new_rating = girl_score + k * (girl[1] - e)
-            self.cursor.execute('''UPDATE girls SET rating=? WHERE filename='?' ''', (new_rating, girl[0]))
+            self.cursor.execute('''UPDATE girls SET rating=? WHERE filename=? ''', (new_rating, girl[0]))
 
         self.conn.commit()
