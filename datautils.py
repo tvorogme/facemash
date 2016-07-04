@@ -68,4 +68,4 @@ class DataUtils:
 
 
     def get_top(self):
-        return self.cursor.execute('''SELECT * FROM girls ORDER BY rating LIMIT 100''').fetchall()
+        return self.cursor.execute('''SELECT * FROM girls ORDER BY rating DESC LIMIT 100''').fetchall()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 from datautils import DataUtils
 
 du = DataUtils()
@@ -19,14 +19,16 @@ def index():
         girl_winner = request.args.get('girl_first')
         girl_looser = request.args.get('girl_second')
         du.update_rating({girl_winner: 1, girl_looser: 0})
+        redirect('/')
     except IndexError:
         pass
 
     return render_template('index.html', girl_first=girl_first, girl_second=girl_second)
 
+
 @app.route('/top_100')
 def top_hindret():
-    return render_template('top_100.html', girls = reversed(du.get_top()))
+    return render_template('top_100.html', girls=du.get_top())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
