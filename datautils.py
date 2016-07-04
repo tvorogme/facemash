@@ -2,27 +2,26 @@
 # coding=utf-8
 import sqlite3
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 
 class DataUtils:
     def update_girs(self):
         filenames_in_data = self.cursor.execute('SELECT filename FROM girls').fetchall()
-        files = [f for f in listdir('data') if isfile(join('data', f))]
 
-        for filename in files:
-            if (filename,) not in filenames_in_data:
-                self.cursor.execute('''INSERT INTO girls VALUES (?, 0)''', (filename,))
-                print('New girl %s' % filename)
-        self.conn.commit()
+        for girl in [f for f in listdir('data') if isdir(join('data', f))]:
+            files = [f for f in listdir('data/%s' % girl) if isfile(join('data/%s' % girl, f))]
+            for filename in files:
+                if (filename,) not in filenames_in_data:
+                    self.cursor.execute('''INSERT INTO girls VALUES (?, 0, ?)''', (filename, girl))
+                    print('New girl %s' % filename)
 
     def __init__(self):
-        self.conn = sqlite3.connect('data.db')
+        self.conn = sqlite3.connect('data.db', isolation_level=None, check_same_thread=False)
         self.cursor = self.conn.cursor()
 
         try:
             print('Create table.')
-            self.cursor.execute('''CREATE TABLE girls (filename text, rating INT)''')
-            self.conn.commit()
+            self.cursor.execute('''CREATE TABLE girls (filename text, rating INT, pornstarname text)''')
         except sqlite3.OperationalError:
             print('Table already created.')
             pass
@@ -37,25 +36,36 @@ class DataUtils:
 
     @staticmethod
     def expected_value(first, second):
-        return 1/1+10*((first-second)/400)
+        return 1/(1+10**((first-second)/400))
+
+    @staticmethod
+    def get_koefficient(score):
+        if score == 0:
+            return 40
+        elif score < 2400:
+            return 20
+        elif score > 2400:
+            return 10
 
     def update_rating(self, girls):
         # Dict to array
         girls = list(map(lambda key: (key, girls[key]), girls))
 
-        e = self.expected_value(girls[0][1], girls[1][1])
+        girl_first = girls[0]
+        girl_second = girls[1]
 
-        for girl in girls:
-            girl_score = self.get_girl(girl[0])[1]
+        # Get rating for first and second girl
+        girls_score = (self.get_girl(girl_first[0])[1], self.get_girl(girl_second[0])[1])
 
-            if girl_score == 0:
-                k = 40
-            elif girl_score < 2400:
-                k = 20
-            elif girl_score > 2400:
-                k = 10
+        koefficients = (self.get_koefficient(girls_score[0]), self.get_koefficient(girls_score[1]))
 
-            new_rating = girl_score + k * (girl[1] - e)
-            self.cursor.execute('''UPDATE girls SET rating=? WHERE filename=? ''', (new_rating, girl[0]))
+        new_rating = (girls_score[0] + koefficients[0] * (girl_first[1] - self.expected_value(girls_score[0], girls_score[1])),
+                      girls_score[1] + koefficients[1] * (girl_second[1] - self.expected_value(girls_score[1], girls_score[0])))
+        # Save rating for first girl
+        for rating, girl in zip(new_rating, (girl_first, girl_second)):
+            print(girl, rating)
+            self.cursor.execute('''UPDATE girls SET rating=? WHERE filename=? ''', (rating, girl[0]))
 
-        self.conn.commit()
+
+    def get_top(self):
+        return self.cursor.execute('''SELECT * FROM girls ORDER BY rating LIMIT 100''').fetchall()
