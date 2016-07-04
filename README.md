@@ -5,6 +5,7 @@
 # Install
 
 `git clone https://github.com/xenx/facemash`
+
 `pip install -r requirements.txt`
 
 # Add photos
