@@ -10,11 +10,10 @@ app = Flask(__name__, static_folder='data', static_url_path='/images')
 @app.route('/')
 def index():
     girl_first = du.get_random_girl()
-    girl_second = du.get_random_girl()
+    girl_second = du.get_same_size_girl(girl_first[3], girl_first[4])
 
-    while girl_first == girl_second:
+    if girl_second == None or girl_first == girl_second:
         girl_second = du.get_random_girl()
-
     try:
         girl_winner = request.args.get('girl_first')
         girl_looser = request.args.get('girl_second')

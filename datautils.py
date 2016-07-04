@@ -3,6 +3,7 @@
 import sqlite3
 from os import listdir
 from os.path import isfile, join, isdir
+from PIL import Image
 
 class DataUtils:
     def update_girs(self):
@@ -11,9 +12,13 @@ class DataUtils:
         for girl in [f for f in listdir('data') if isdir(join('data', f))]:
             files = [f for f in listdir('data/%s' % girl) if isfile(join('data/%s' % girl, f))]
             for filename in files:
+                with Image.open('data/{0}/{1}'.format(girl, filename)) as im:
+                    width, height = im.size
                 if (filename,) not in filenames_in_data:
-                    self.cursor.execute('''INSERT INTO girls VALUES (?, 0, ?)''', (filename, girl))
+                    self.cursor.execute('''INSERT INTO girls VALUES (?, 0, ?, ?, ?)''', (filename, girl, width, height))
                     print('New girl %s' % filename)
+                    print(width, height)
+                    print('-----------------------')
 
     def __init__(self):
         self.conn = sqlite3.connect('data.db', isolation_level=None, check_same_thread=False)
@@ -21,7 +26,7 @@ class DataUtils:
 
         try:
             print('Create table.')
-            self.cursor.execute('''CREATE TABLE girls (filename text, rating INT, pornstarname text)''')
+            self.cursor.execute('''CREATE TABLE girls (filename text, rating INT, pornstarname text, width INT, height INT)''')
         except sqlite3.OperationalError:
             print('Table already created.')
             pass
@@ -30,6 +35,9 @@ class DataUtils:
 
     def get_random_girl(self):
         return self.cursor.execute('''SELECT * FROM girls ORDER BY RANDOM() LIMIT 1''').fetchone()
+
+    def get_same_size_girl(self, width, height):
+        return self.cursor.execute('''SELECT * FROM girls WHERE width=? AND height=? ORDER BY RANDOM() LIMIT 1''', (width, height)).fetchone()
 
     def get_girl(self, girl_name):
         return self.cursor.execute('''SELECT * FROM girls WHERE filename=? ''', (girl_name,)).fetchone()
@@ -63,7 +71,6 @@ class DataUtils:
                       girls_score[1] + koefficients[1] * (girl_second[1] - self.expected_value(girls_score[1], girls_score[0])))
         # Save rating for first girl
         for rating, girl in zip(new_rating, (girl_first, girl_second)):
-            print(girl, rating)
             self.cursor.execute('''UPDATE girls SET rating=? WHERE filename=? ''', (rating, girl[0]))
 
 
